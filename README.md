@@ -67,7 +67,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 
 ---
 
-⚙️ Configuração de Pacotes
+## ⚙️ Configuração de Pacotes
+
+--
 
 Para adicionar ou remover programas, basta editar o packages_windows.json:
 
@@ -89,9 +91,9 @@ Exemplo:
 }
 ```
 
---
+## 🔄 Manutenção e Updates
 
-🔄 Manutenção e Updates
+--
 
 Para manter seus aplicativos atualizados e o sistema limpo:
 
@@ -108,6 +110,8 @@ O que ele faz:
 
 * Limpa caches de pacotes e arquivos temporários do sistema.
 
-📄 Licença
+## 📄 Licença
 
-Este projeto é licenciado sob a MIT License - veja o arquivo LICENSE para detalhes.
+==
+
+Este projeto é licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
