@@ -1,6 +1,6 @@
 {
   "winget": [
-    // --- 1. Launchers Principais e Obrigatórios ---
+    // --- 1. Launchers Principais e Unificador ---
     "Valve.Steam",
     "EpicGames.EpicGamesLauncher",
     "GOG.Galaxy",
@@ -9,9 +9,11 @@
     "RiotGames.RiotClient",
     "Hydra-Launcher.Hydra-Launcher",
     "HeroicGamesLauncher.HeroicGamesLauncher",
+    "Playnite.Playnite",
 
     // --- 2. Comunicação e Input ---
     "Discord.Discord",
+    "TeamSpeak.TeamSpeak",
     "Ryochan7.DS4Windows",
     "File-Bot.EarTrumpet",
     
