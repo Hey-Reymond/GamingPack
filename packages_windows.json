@@ -1,39 +1,65 @@
 {
   "winget": [
-    // --- Launchers Principais ---
+    // --- 1. Launchers Principais e Obrigatórios ---
     "Valve.Steam",
     "EpicGames.EpicGamesLauncher",
     "GOG.Galaxy",
-    "Discord.Discord",
+    "ElectronicArts.EAApp",
+    "Ubisoft.Connect",
+    "RiotGames.RiotClient",
     "Hydra-Launcher.Hydra-Launcher",
     "HeroicGamesLauncher.HeroicGamesLauncher",
 
-    // --- Otimização e Gerenciamento ---
+    // --- 2. Comunicação e Input ---
+    "Discord.Discord",
+    "Ryochan7.DS4Windows",
+    "File-Bot.EarTrumpet",
+    
+    // --- 3. Otimização e Limpeza ---
     "Microsoft.PCManager",
     "Razer.Cortex",
     "Sordum.DnsJumper",
     "TimerResolution.TimerResolution",
-    
-    // --- Monitoramento e Gravação ---
-    "MSI.Afterburner",
-    "OBSProject.OBSStudio",
-    "Nvidia.GeForceExperience",
-    "Parsec.Parsec",
+    "Cloudflare.WARP",
+    "BleachBit.BleachBit",
+    "Revo.Uninstaller.Free",
 
-    // --- Utilitários Gerais ---
+    // --- 4. Runtimes Essenciais (Via Winget) ---
+    "EclipseAdoptium.Temurin.17.JRE", // JRE (Java Runtime)
+    "Microsoft.PowerShell",
+    "gerardog.gsudo",
+
+    // --- 5. Monitoramento e Hardware (Agnóstico) ---
+    "MSI.Afterburner",
+    "CPUID.HWMonitor",
+    "TechPowerUp.GPU-Z",
+    "CrystalDewWorld.CrystalDiskInfo",
+    
+    // --- 6. Utilitários de Gravação e QoL ---
+    "OBSProject.OBSStudio",
+    "Parsec.Parsec",
+    "ShareX.ShareX",
+    "VLC.VLC",
     "7zip.7zip",
     "RARLab.WinRAR",
-    "gerardog.gsudo",
-    "JanDeDobbeleer.OhMyPosh",
-    "sharkdp.bat",
-    "eza-community.eza"
+    "JanDeDobbeleer.OhMyPosh"
   ],
   "choco": [
-    // --- Utilitários de Otimização ---
-    "filterkeys-setter",
-
-    // --- Dependências Essenciais de Jogos ---
+    // --- PACOTES CRÍTICOS DE COMPATIBILIDADE ---
+    
+    // 1. VCRedist (C++): Instala TODOS os runtimes (2005 a 2022)
     "vcredist-all",
-    "directx"
+    
+    // 2. DirectX (Legacy): Instala DLLs (d3dx9_*.dll) ausentes
+    "directx",
+    
+    // 3. .NET (Legacy): Para mods e launchers antigos (.NET 3.5/4.x)
+    "dotnetfx",
+    
+    // 4. .NET (Modern): Para mods e launchers modernos (.NET 6/8)
+    "dotnet-desktop-runtime",
+
+    // 5. Otimização (Ferramenta da sua foto)
+    "filterkeys-setter"
   ]
 }
