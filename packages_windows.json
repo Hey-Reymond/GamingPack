@@ -1,0 +1,39 @@
+{
+  "winget": [
+    // --- Launchers Principais ---
+    "Valve.Steam",
+    "EpicGames.EpicGamesLauncher",
+    "GOG.Galaxy",
+    "Discord.Discord",
+    "Hydra-Launcher.Hydra-Launcher",
+    "HeroicGamesLauncher.HeroicGamesLauncher",
+
+    // --- Otimização e Gerenciamento ---
+    "Microsoft.PCManager",
+    "Razer.Cortex",
+    "Sordum.DnsJumper",
+    "TimerResolution.TimerResolution",
+    
+    // --- Monitoramento e Gravação ---
+    "MSI.Afterburner",
+    "OBSProject.OBSStudio",
+    "Nvidia.GeForceExperience",
+    "Parsec.Parsec",
+
+    // --- Utilitários Gerais ---
+    "7zip.7zip",
+    "RARLab.WinRAR",
+    "gerardog.gsudo",
+    "JanDeDobbeleer.OhMyPosh",
+    "sharkdp.bat",
+    "eza-community.eza"
+  ],
+  "choco": [
+    // --- Utilitários de Otimização ---
+    "filterkeys-setter",
+
+    // --- Dependências Essenciais de Jogos ---
+    "vcredist-all",
+    "directx"
+  ]
+}
