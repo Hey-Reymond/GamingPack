@@ -59,7 +59,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 .\setup_windows.ps1
 ```
 
-**Passo 3: Relaxar
+**Passo 3: Relaxar**
 
 * O script irá instalar o Chocolatey (se necessário), baixar o Windows Update em background, e instalar todos os apps do `packages_windows.json`.
 
