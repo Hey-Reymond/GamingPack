@@ -89,6 +89,8 @@ Exemplo:
 }
 ```
 
+--
+
 🔄 Manutenção e Updates
 
 Para manter seus aplicativos atualizados e o sistema limpo:
