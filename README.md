@@ -27,11 +27,13 @@ Este pack instala as seguintes categorias de software, definidas no `packages_wi
 
 | Categoria | Ferramentas e Tecnologias |
 |----------|----------------------|
-| **🎮 Launchers** | Steam, Epic Games, GOG Galaxy, Discord, HydraLauncher, Heroic |
-| **⚡ Otimização** | Microsoft PC Manager, Razer Cortex, DnsJumper, TimerResolution, FilterKeysSetter |
-| **📊 Monitoramento & Captura** | MSI Afterburner, OBS Studio, NVIDIA GeForce Experience, Parsec |
-| **🕹️ Dependências Essenciais** | VCRedist (All-in-One), DirectX |
-| **🧰 Utilitários de Terminal** | gsudo, Oh My Posh, Bat, Eza |
+| **🎮 Launchers e Unificação** | Steam, Epic Games, GOG, EA App, Ubisoft Connect, Riot Client, HydraLauncher, Heroic, Playnite |
+| **⚡ Otimização Avançada** | Process Lasso, DDU, WizTree, BleachBit, Revo Uninstaller, Razer Cortex, TimerResolution, DnsJumper, FilterKeysSetter, TCPOptimizer |
+| **🕹️ Runtimes de Compatibilidade** | VCRedist (All-in-One), DirectX (Legacy), .NET Framework (Legacy), .NET Desktop Runtime (Modern), JRE (Java 17) |
+| **📊 Monitoramento e Hardware** | MSI Afterburner, HWMonitor, GPU-Z, CrystalDiskInfo |
+| **🎙️ Comunicação e Input** | Discord, TeamSpeak, DS4Windows, EarTrumpet |
+| **📡 Rede e Utilitários** | Cloudflare WARP, Parsec, ShareX, OBS Studio, OP AutoClicker, Microsoft PC Manager |
+| **🧰 Utilitários Essenciais** | 7-Zip, WinRAR, gsudo, PowerShell, Oh My Posh, VLC |
 
 ---
 
@@ -51,7 +53,7 @@ cd GamingPack
 ```
 
 **Passo 2: Executar o Script de Setup Abra o PowerShell como Administrador:**
-```shell
+```powershell
 # Desbloqueia o script para execução
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -97,7 +99,7 @@ Exemplo:
 
 Para manter seus aplicativos atualizados e o sistema limpo:
 
-```shell
+```powershell
 # Rode como Administrador
 .\update_windows.ps1
 ```
