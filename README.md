@@ -104,9 +104,9 @@ Para manter seus aplicativos atualizados e o sistema limpo:
 
 O que ele faz:
 
-* Atualiza todos os pacotes Winget (winget upgrade --all).
+* Atualiza todos os pacotes Winget (`winget upgrade --all`).
 
-* Atualiza todos os pacotes Chocolatey (choco upgrade all -y).
+* Atualiza todos os pacotes Chocolatey (`choco upgrade all -y`).
 
 * Limpa caches de pacotes e arquivos temporários do sistema.
 
