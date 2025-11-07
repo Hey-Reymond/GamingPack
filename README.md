@@ -48,3 +48,64 @@ Este pack instala as seguintes categorias de software, definidas no `packages_wi
 ```bash
 git clone https://github.com/reireymond/GamingPack
 cd GamingPack
+```
+
+**Passo 2: Executar o Script de Setup Abra o PowerShell como Administrador:**
+```shell
+# Desbloqueia o script para execução
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Executa o setup
+.\setup_windows.ps1
+```
+
+**Passo 3: Relaxar
+
+* O script irá instalar o Chocolatey (se necessário), baixar o Windows Update em background, e instalar todos os apps do `packages_windows.json`.
+
+* Reinicie o PC no final, se solicitado.
+
+---
+
+⚙️ Configuração de Pacotes
+
+Para adicionar ou remover programas, basta editar o packages_windows.json:
+
+* winget: IDs de pacotes do Windows Package Manager (preferencial).
+
+* choco: Nomes de pacotes do Chocolatey (para dependências como vcredist-all ou apps que não estão no winget).
+
+Exemplo:
+
+```json
+{
+  "winget": [
+    "Valve.Steam",
+    "MSI.Afterburner"
+  ],
+  "choco": [
+    "vcredist-all"
+  ]
+}
+```
+
+🔄 Manutenção e Updates
+
+Para manter seus aplicativos atualizados e o sistema limpo:
+
+```shell
+# Rode como Administrador
+.\update_windows.ps1
+```
+
+O que ele faz:
+
+* Atualiza todos os pacotes Winget (winget upgrade --all).
+
+* Atualiza todos os pacotes Chocolatey (choco upgrade all -y).
+
+* Limpa caches de pacotes e arquivos temporários do sistema.
+
+📄 Licença
+
+Este projeto é licenciado sob a MIT License - veja o arquivo LICENSE para detalhes.
