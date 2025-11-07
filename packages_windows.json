@@ -17,7 +17,7 @@
     "Ryochan7.DS4Windows",
     "File-Bot.EarTrumpet",
     
-    // --- 3. Otimização e Utilitários ---
+    // --- 3. Otimização e Limpeza (Avançada) ---
     "Microsoft.PCManager",
     "Razer.Cortex",
     "Sordum.DnsJumper",
@@ -26,6 +26,10 @@
     "BleachBit.BleachBit",
     "Revo.Uninstaller.Free",
     "OP.AutoClicker",
+    "Wagnard.DisplayDriverUninstaller",
+    "Bitsum.ProcessLasso",
+    "AntibodySoftware.WizTree",
+    "SpeedGuide.TCPOptimizer",
 
     // --- 4. Runtimes Essenciais (Via Winget) ---
     "EclipseAdoptium.Temurin.17.JRE", // JRE (Java Runtime)
