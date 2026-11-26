@@ -48,7 +48,7 @@ Este pack instala as seguintes categorias de software, definidas no `packages_wi
 
 **Passo 1: Clonar o Repositório**
 ```bash
-git clone https://github.com/reireymond/GamingPack
+git clone https://github.com/Hey-Reymond/GamingPack
 cd GamingPack
 ```
 
