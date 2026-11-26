@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     "Super" Master Script para configurar um ambiente Windows para Gaming.
 .DESCRIPTION
@@ -8,9 +8,10 @@
     4. Instala/Atualiza TODAS as ferramentas de jogos (Seção 5) e Windows Updates (Seção 8) em paralelo.
     5. Limpa todos os arquivos temporários e otimiza o sistema.
 .NOTES
-    Version: 1.0 (Baseado no ESSENTIALSPPACK v5.2)
+    Version: 1.1 (Baseado no ESSENTIALSPPACK v5.2)
     Author: Kaua
-    LOGIC: Usa a função híbrida Install-Package com prioridade winget e fallback choco.
+    LOGIC: Usa a função híbrida Install-Package com prioridade winget e fallback choco
+           (o fallback só acontece quando o JSON informa o nome do pacote no choco).
 #>
 
 # --- 0. Helper Functions & Global Variables ---
@@ -92,7 +93,7 @@ function Write-InstallSummary {
     }
     
     Write-Host ""
-    Write-Host "⊘ Ignorado ($($Global:InstallSummary.Skipped.Count)):" -ForegroundColor Yellow
+    Write-Host "⊘ Já instalado / ignorado ($($Global:InstallSummary.Skipped.Count)):" -ForegroundColor Yellow
     if ($Global:InstallSummary.Skipped.Count -gt 0) {
         foreach ($pkg in $Global:InstallSummary.Skipped) {
             Write-Host "  - $pkg" -ForegroundColor Yellow
@@ -114,7 +115,7 @@ function Write-InstallSummary {
     
     $summaryObject = @{
         Timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-        ScriptVersion = "1.0"
+        ScriptVersion = "1.1"
         Succeeded = $Global:InstallSummary.Succeeded
         Failed = $Global:InstallSummary.Failed
         Skipped = $Global:InstallSummary.Skipped
@@ -133,83 +134,194 @@ function Write-InstallSummary {
     }
 }
 
-# --- HYBRID INSTALLATION FUNCTION (DO SEU PACK ORIGINAL) ---
+# --- INSTALAÇÃO HÍBRIDA (winget -> choco) ---
+
+# Códigos de saída tratados
+$Script:WingetAlreadyInstalledCodes = @(
+    -1978335189,  # 0x8A15002B: nenhuma atualização aplicável
+    -1978335135   # 0x8A150061: pacote já instalado
+)
+$Script:InstallInProgressCodes = @(
+    1618,         # MSI: outra instalação em andamento (ex.: Windows Update em paralelo)
+    -1978334974   # 0x8A150102: winget - instalação em andamento
+)
+$Script:ChocoSuccessCodes = @(0, 1605, 1614, 1641, 3010)
+
+function Get-JsonProperty {
+    param($Object, [string]$Name)
+    if ($null -eq $Object -or $Object -is [string]) { return $null }
+    $prop = $Object.PSObject.Properties[$Name]
+    if ($prop) { return $prop.Value }
+    return $null
+}
+
+function ConvertTo-PackageSpec {
+    # Aceita "Winget.Id" (string) ou { "name": "...", "winget": "...", "choco": "..." }
+    param($Entry, [switch]$ChocoOnly)
+    if ($Entry -is [string]) {
+        if ($ChocoOnly) { return [pscustomobject]@{ Name = $Entry; Winget = ""; Choco = $Entry } }
+        return [pscustomobject]@{ Name = $Entry; Winget = $Entry; Choco = "" }
+    }
+    $winget = [string](Get-JsonProperty $Entry "winget")
+    $choco  = [string](Get-JsonProperty $Entry "choco")
+    $name   = [string](Get-JsonProperty $Entry "name")
+    if (-not $name) { $name = if ($winget) { $winget } else { $choco } }
+    return [pscustomobject]@{ Name = $name; Winget = $winget; Choco = $choco }
+}
+
+function Get-WingetInstalledIds {
+    # 'winget list' corta IDs longos com "…"; 'winget export' devolve os IDs completos.
+    $ErrorActionPreference = 'Continue'
+    $ids = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    $tmp = Join-Path $env:TEMP "winget-export-$PID.json"
+    try {
+        winget export -o $tmp --accept-source-agreements 2>&1 | Out-Null
+        if (Test-Path $tmp) {
+            $data = Get-Content $tmp -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($src in $data.Sources) {
+                foreach ($pkg in $src.Packages) { [void]$ids.Add($pkg.PackageIdentifier) }
+            }
+        }
+    } catch {
+        Write-Host "  WARNING: Falha ao listar pacotes do winget: $($_.Exception.Message)" -ForegroundColor Yellow
+    } finally {
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+    return ,$ids
+}
+
+function Get-ChocoInstalledNames {
+    # Choco v2: 'list' já é local. Choco v1: precisa de '-lo' (sem ele lista o repositório remoto inteiro).
+    $ErrorActionPreference = 'Continue'
+    $names = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    try {
+        $major = 0
+        [void][int]::TryParse(((choco --version 2>$null | Select-Object -First 1) -split '\.')[0], [ref]$major)
+        $lines = if ($major -ge 2) { choco list -r 2>$null } else { choco list -lo -r 2>$null }
+        foreach ($line in $lines) {
+            $pkgName = ($line -split '\|')[0].Trim()
+            if ($pkgName) { [void]$names.Add($pkgName) }
+        }
+    } catch {
+        Write-Host "  WARNING: Falha ao listar pacotes do Chocolatey: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+    return ,$names
+}
+
+function Invoke-WithInstallRetry {
+    # Repete a instalação quando outro instalador (ex.: Windows Update) está ocupando o MSI.
+    param([scriptblock]$Action, [string]$PackageName, [int]$MaxAttempts = 4, [int]$DelaySeconds = 45)
+    $code = 0
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $code = & $Action
+        if ($Script:InstallInProgressCodes -notcontains $code) { return $code }
+        if ($attempt -lt $MaxAttempts) {
+            Write-Host "    Outra instalação em andamento (código $code). Nova tentativa em $DelaySeconds s... ($attempt/$MaxAttempts)" -ForegroundColor Yellow
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+    return $code
+}
+
 function Install-Package {
     param(
         [Parameter(Mandatory=$true)]
         [string]$PackageName,
         [string]$WingetId = "",
+        [string]$ChocoName = "",
         [scriptblock]$SpecialHandler = $null,
-        
-        # --- OTIMIZAÇÃO NÍVEL 2 ---
-        [string[]]$InstalledWingetCache = @(),
-        [string[]]$InstalledChocoCache = @()
+        $InstalledWinget = $null,
+        $InstalledChoco = $null
     )
-    
+
+    # Comandos nativos escrevem em stderr; isso não pode virar exceção aqui.
+    $ErrorActionPreference = 'Continue'
+
     Write-Host "  -> Instalando: $PackageName" -ForegroundColor Cyan
-    
-    if ($WingetId) {
-        if ($InstalledWingetCache -match $WingetId) {
-            Write-Host "  ✓ $PackageName (já instalado via winget)" -ForegroundColor Green
-            $Global:InstallSummary.Succeeded += $PackageName
-            return $true
-        }
-    }
-    
-    if ($InstalledChocoCache -match $PackageName) {
-        Write-Host "  ✓ $PackageName (já instalado via choco)" -ForegroundColor Green
-        $Global:InstallSummary.Succeeded += $PackageName
+
+    if ($WingetId -and $InstalledWinget -and $InstalledWinget.Contains($WingetId)) {
+        Write-Host "  ✓ $PackageName (já instalado via winget)" -ForegroundColor Green
+        $Global:InstallSummary.Skipped += $PackageName
         return $true
     }
-    
+    if ($ChocoName -and $InstalledChoco -and $InstalledChoco.Contains($ChocoName)) {
+        Write-Host "  ✓ $PackageName (já instalado via choco)" -ForegroundColor Green
+        $Global:InstallSummary.Skipped += $PackageName
+        return $true
+    }
+
     if ($WingetId) {
         Write-Host "    Tentando winget..." -ForegroundColor Gray
-        $installResult = Start-Process -FilePath winget -ArgumentList "install --id $WingetId --accept-package-agreements --accept-source-agreements -h" -Wait -NoNewWindow -PassThru -ErrorAction SilentlyContinue
-        
-        if ($null -ne $installResult -and $installResult.ExitCode -eq 0) {
+        $wingetCode = Invoke-WithInstallRetry -PackageName $PackageName -Action {
+            winget install --id $WingetId -e --accept-package-agreements --accept-source-agreements -h | Out-Host
+            $LASTEXITCODE
+        }
+
+        if ($wingetCode -eq 0) {
             Write-Host "  ✓ $PackageName (instalado via winget)" -ForegroundColor Green
             $Global:InstallSummary.Succeeded += $PackageName
             return $true
-        } elseif ($null -ne $installResult -and $installResult.ExitCode -eq -1978335189) {
-            Write-Host "  ✓ $PackageName (já atualizado via winget)" -ForegroundColor Green
-            $Global:InstallSummary.Succeeded += $PackageName
+        } elseif ($Script:WingetAlreadyInstalledCodes -contains $wingetCode) {
+            Write-Host "  ✓ $PackageName (já instalado/atualizado via winget)" -ForegroundColor Green
+            $Global:InstallSummary.Skipped += $PackageName
             return $true
         }
-        
-        Write-Host "    Winget falhou, tentando chocolatey..." -ForegroundColor Yellow
+
+        if (-not $ChocoName) {
+            Write-Host "  ✗ $PackageName (winget falhou, código $wingetCode; sem fallback no choco)" -ForegroundColor Yellow
+            $Global:InstallSummary.Failed += @{
+                Package  = $PackageName
+                ExitCode = $wingetCode
+                Error    = "winget install falhou e não há nome 'choco' definido no JSON"
+            }
+            return $false
+        }
+        Write-Host "    Winget falhou (código $wingetCode), tentando Chocolatey ($ChocoName)..." -ForegroundColor Yellow
     }
-    
+
     $output = ""
-    $exitCode = 0
-    
-    try {
-        $output = choco upgrade $PackageName -y --noprogress 2>&1 | Out-String
-        $exitCode = $LASTEXITCODE
-    } catch {
-        $output = $_.Exception.Message
-        $exitCode = -1
+    $Script:LastChocoOutput = ""
+    $exitCode = Invoke-WithInstallRetry -PackageName $PackageName -Action {
+        $Script:LastChocoOutput = choco upgrade $ChocoName -y --no-progress 2>&1 | Out-String
+        $LASTEXITCODE
     }
-    
+    $output = $Script:LastChocoOutput
+
     if ($null -ne $SpecialHandler) {
         & $SpecialHandler -ExitCode $exitCode -Output $output -PackageName $PackageName
     }
-    
-    if ($exitCode -eq 0) {
+
+    if ($Script:ChocoSuccessCodes -contains $exitCode) {
+        if ($exitCode -in 1641, 3010) { $Global:RebootIsNeeded = $true }
         Write-Host "  ✓ $PackageName (instalado via choco)" -ForegroundColor Green
         $Global:InstallSummary.Succeeded += $PackageName
         return $true
-    } elseif ($exitCode -eq 1605 -or $exitCode -eq 1614 -or $exitCode -eq 1641) {
-        Write-Host "  ✓ $PackageName (já instalado ou requer reinicialização)" -ForegroundColor Green
-        $Global:InstallSummary.Succeeded += $PackageName
-        return $true
-    } else {
-        Write-Host "  ✗ $PackageName (exit code: $exitCode)" -ForegroundColor Yellow
-        $Global:InstallSummary.Failed += @{
-            Package = $PackageName
-            ExitCode = $exitCode
-            Error = if ($output -match "error|failed") { ($output -split "`n" | Select-Object -First 3) -join "; " } else { "Unknown error" }
-        }
-        return $false
+    }
+
+    Write-Host "  ✗ $PackageName (exit code: $exitCode)" -ForegroundColor Yellow
+    $Global:InstallSummary.Failed += @{
+        Package  = $PackageName
+        ExitCode = $exitCode
+        Error    = if ($output -match "error|failed") { ($output -split "`n" | Where-Object { $_ -match "error|failed" } | Select-Object -First 3) -join "; " } else { "Unknown error" }
+    }
+    return $false
+}
+
+function Show-ManualPackages {
+    param($Entries)
+    if (-not $Entries) { return }
+    Write-Host ""
+    Write-Host "============================================================" -ForegroundColor Cyan
+    Write-Host "  INSTALAÇÃO MANUAL (sem pacote no winget/choco)" -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Cyan
+    foreach ($entry in $Entries) {
+        $name = Get-JsonProperty $entry "name"
+        $url  = Get-JsonProperty $entry "url"
+        $note = Get-JsonProperty $entry "note"
+        Write-Host "  - $name" -ForegroundColor Yellow -NoNewline
+        if ($url)  { Write-Host "  ->  $url" -NoNewline }
+        Write-Host ""
+        if ($note) { Write-Host "      $note" -ForegroundColor Gray }
     }
 }
 
@@ -307,21 +419,11 @@ Write-Host "  (Windows Update está rodando em paralelo...)"
 Write-Host "============================================================"
 Write-Host ""
 
-# --- CACHE DE PACOTES (NÍVEL 2) ---
+# --- CACHE DE PACOTES ---
 Write-Host "Construindo cache de pacotes (pode levar um momento)..." -ForegroundColor Yellow
-$installedWinget = @()
-$installedChoco = @()
-try {
-    $installedWinget = winget list 2>&1 | Out-String
-} catch {
-    Write-Host "  WARNING: Falha ao construir cache winget." -ForegroundColor Yellow
-}
-try {
-    $installedChoco = choco list -lo --limitoutput 2>&1 | Out-String
-} catch {
-    Write-Host "  WARNING: Falha ao construir cache choco." -ForegroundColor Yellow
-}
-Write-Host "Cache de pacotes construído." -ForegroundColor Green
+$installedWinget = Get-WingetInstalledIds
+$installedChoco = Get-ChocoInstalledNames
+Write-Host "Cache de pacotes construído ($($installedWinget.Count) winget / $($installedChoco.Count) choco)." -ForegroundColor Green
 
 # --- CARREGAR DEFINIÇÕES DO JSON ---
 $PackageJsonPath = Join-Path $PSScriptRoot "packages_windows.json"
@@ -331,25 +433,30 @@ if (-not (Test-Path $PackageJsonPath)) {
     exit
 }
 try {
-    $PackageDefinitions = Get-Content $PackageJsonPath -Raw | ConvertFrom-Json
+    $PackageDefinitions = Get-Content $PackageJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
     Write-Host "Definições de pacotes carregadas do JSON." -ForegroundColor Green
 } catch {
-    Write-Host "ERROR: Falha ao ler packages_windows.json" -ForegroundColor Red
+    Write-Host "ERROR: Falha ao ler packages_windows.json (JSON inválido? Comentários // não são permitidos)" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
     Read-Host "Pressione ENTER para sair..."
     exit
 }
 
-# 5.1: INSTALAR PACOTES WINGET
-Write-Host ">>> Iniciando pacotes Winget (com fallback para Choco)..." -ForegroundColor Yellow
-foreach ($packageId in $PackageDefinitions.winget) {
-    Install-Package -PackageName $packageId -WingetId $packageId -InstalledWingetCache $installedWinget -InstalledChocoCache $installedChoco
+# 5.1: INSTALAR PACOTES WINGET (fallback para choco quando o JSON informa o nome no choco)
+Write-Host ">>> Iniciando pacotes Winget..." -ForegroundColor Yellow
+foreach ($entry in @(Get-JsonProperty $PackageDefinitions "winget")) {
+    if ($null -eq $entry) { continue }
+    $spec = ConvertTo-PackageSpec $entry
+    Install-Package -PackageName $spec.Name -WingetId $spec.Winget -ChocoName $spec.Choco -InstalledWinget $installedWinget -InstalledChoco $installedChoco | Out-Null
 }
 
 # 5.2: INSTALAR PACOTES CHOCO-ONLY
 Write-Host ""
 Write-Host ">>> Iniciando pacotes Chocolatey-only..." -ForegroundColor Yellow
-foreach ($packageName in $PackageDefinitions.choco) {
-    Install-Package -PackageName $packageName -InstalledWingetCache $installedWinget -InstalledChocoCache $installedChoco
+foreach ($entry in @(Get-JsonProperty $PackageDefinitions "choco")) {
+    if ($null -eq $entry) { continue }
+    $spec = ConvertTo-PackageSpec $entry -ChocoOnly
+    Install-Package -PackageName $spec.Name -ChocoName $spec.Choco -InstalledWinget $installedWinget -InstalledChoco $installedChoco | Out-Null
 }
 
 Write-Host ""
@@ -389,7 +496,6 @@ Write-Host ""
 Write-Host "[+] Limpando arquivos temporários..." -ForegroundColor Cyan
 Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$env:SystemRoot\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "$env:SystemRoot\Prefetch\*" -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "[+] Limpando cache do Chocolatey..." -ForegroundColor Cyan
 choco cache remove --all 2>&1 | Out-Null
@@ -401,6 +507,7 @@ Write-Host "Limpeza do sistema concluída." -ForegroundColor Green
 
 # --- 9.1: RESUMO DA INSTALAÇÃO ---
 Write-InstallSummary
+Show-ManualPackages (Get-JsonProperty $PackageDefinitions "manual")
 
 # --- 10. Finalização ---
 Write-Host ""

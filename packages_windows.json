@@ -1,72 +1,61 @@
 {
+  "_info": "Comentários // não são JSON válido (quebram o PowerShell 5.1). Use chaves '_info' para anotações. Entradas de 'winget' podem ser uma string (ID) ou um objeto { \"name\": \"...\", \"winget\": \"ID\", \"choco\": \"nome-no-choco\" } para ativar o fallback no Chocolatey.",
+
   "winget": [
-    // --- 1. Launchers Principais e Unificador ---
     "Valve.Steam",
     "EpicGames.EpicGamesLauncher",
     "GOG.Galaxy",
-    "ElectronicArts.EAApp",
+    "ElectronicArts.EADesktop",
     "Ubisoft.Connect",
-    "RiotGames.RiotClient",
-    "Hydra-Launcher.Hydra-Launcher",
+    "HydraLauncher.Hydra",
     "HeroicGamesLauncher.HeroicGamesLauncher",
     "Playnite.Playnite",
 
-    // --- 2. Comunicação e Input ---
     "Discord.Discord",
-    "TeamSpeak.TeamSpeak",
-    "Ryochan7.DS4Windows",
-    "File-Bot.EarTrumpet",
-    
-    // --- 3. Otimização e Limpeza (Avançada) ---
-    "Microsoft.PCManager",
-    "Razer.Cortex",
-    "Sordum.DnsJumper",
-    "TimerResolution.TimerResolution",
-    "Cloudflare.WARP",
-    "BleachBit.BleachBit",
-    "Revo.Uninstaller.Free",
-    "OP.AutoClicker",
-    "Wagnard.DisplayDriverUninstaller",
-    "Bitsum.ProcessLasso",
-    "AntibodySoftware.WizTree",
-    "SpeedGuide.TCPOptimizer",
+    "TeamSpeakSystems.TeamSpeakClient",
+    "File-New-Project.EarTrumpet",
 
-    // --- 4. Runtimes Essenciais (Via Winget) ---
-    "EclipseAdoptium.Temurin.17.JRE", // JRE (Java Runtime)
+    "sordum.DnsJumper",
+    "Cloudflare.Warp",
+    "BleachBit.BleachBit",
+    "RevoUninstaller.RevoUninstaller",
+    "Wagnardsoft.DisplayDriverUninstaller",
+    "BitSum.ProcessLasso",
+    "AntibodySoftware.WizTree",
+
+    "EclipseAdoptium.Temurin.17.JRE",
     "Microsoft.PowerShell",
     "gerardog.gsudo",
 
-    // --- 5. Monitoramento e Hardware (Agnóstico) ---
-    "MSI.Afterburner",
+    "Guru3D.Afterburner",
     "CPUID.HWMonitor",
     "TechPowerUp.GPU-Z",
     "CrystalDewWorld.CrystalDiskInfo",
-    
-    // --- 6. Utilitários de Gravação e QoL ---
+
     "OBSProject.OBSStudio",
     "Parsec.Parsec",
     "ShareX.ShareX",
-    "VLC.VLC",
+    "VideoLAN.VLC",
     "7zip.7zip",
     "RARLab.WinRAR",
     "JanDeDobbeleer.OhMyPosh"
   ],
-  "choco": [
-    // --- PACOTES CRÍTICOS DE COMPATIBILIDADE ---
-    
-    // 1. VCRedist (C++): Instala TODOS os runtimes (2005 a 2022)
-    "vcredist-all",
-    
-    // 2. DirectX (Legacy): Instala DLLs (d3dx9_*.dll) ausentes
-    "directx",
-    
-    // 3. .NET (Legacy): Para mods e launchers antigos (.NET 3.5/4.x)
-    "dotnetfx",
-    
-    // 4. .NET (Modern): Para mods e launchers modernos (.NET 6/8)
-    "dotnet-desktop-runtime",
 
-    // 5. Otimização (Ferramenta da sua foto)
-    "filterkeys-setter"
+  "choco": [
+    "vcredist-all",
+    "directx",
+    "dotnetfx",
+    "dotnet-desktop-runtime",
+    "filterkeys-setter",
+    "ds4windows"
+  ],
+
+  "manual": [
+    { "name": "Riot Client (Valorant / LoL)", "url": "https://www.riotgames.com/", "note": "O winget só tem os jogos (RiotGames.Valorant.* / RiotGames.LeagueOfLegends.*), não o client sozinho." },
+    { "name": "Razer Cortex", "url": "https://www.razer.com/cortex" },
+    { "name": "Microsoft PC Manager", "url": "https://pcmanager.microsoft.com/", "note": "Distribuído pela Microsoft Store." },
+    { "name": "TCP Optimizer", "url": "https://www.speedguide.net/downloads.php", "note": "Executável portátil." },
+    { "name": "OP AutoClicker", "url": "https://www.opautoclicker.com/", "note": "Cuidado: pode causar ban em jogos com anti-cheat (Vanguard, EAC, BattlEye)." },
+    { "name": "TimerResolution", "note": "Sem pacote oficial; ganho no Windows 11 é discutível." }
   ]
 }
